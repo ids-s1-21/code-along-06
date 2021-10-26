@@ -1,7 +1,7 @@
 ---
-title: "Code-along, Week 06: Scraping the Emmys data"
+title: "Code-along, Week 06: Wikipedia API"
 author: "Alex Homer"
-date: "21 October 2021"
+date: "28 October 2021"
 output: github_document
 editor_options: 
   chunk_output_type: console
@@ -9,6 +9,7 @@ editor_options:
 
 ```{r load-packages, message = FALSE}
 library(tidyverse)
+library(lubridate)
 ```
 
 ## Read data

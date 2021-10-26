@@ -1,11 +1,11 @@
+library(magrittr)
 library(tidyverse)
-library(rvest) #For scraping and related processes
-library(robotstxt) #For checking if scraping is allowed
+library(httr)
+library(jsonlite)
 
-#First check if scraping is allowed.
-paths_allowed(
-  "https://www.hsm.ox.ac.uk/collections-online#/search/simple-search/*/%257B%257D/1/96/catalogue"
+res <- GET(
+  "https://en.wikipedia.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:Countries_in_Europe&cmlimit=500&format=json"
 )
-# Returns TRUE
+res$content
 
 #The rest of this file will be filled in during the live code-along on Thursday.

@@ -1,10 +1,11 @@
-Code-along, Week 06: Scraping the Emmys data
+Code-along, Week 06: Wikipedia API
 ================
 Alex Homer
-21 October 2021
+28 October 2021
 
 ``` r
 library(tidyverse)
+library(lubridate)
 ```
 
 ## Read data
