@@ -129,7 +129,7 @@ views_cleaned %>%
 To round off, let's find out which days had France with more views than the UK.  There are a couple of ways to do this, but I think this is occasion where `pivot_wider` might actually be useful.
 
 ```{r pivot-wider}
-views_cleaned %>%
+france_more <- views_cleaned %>%
   filter(article %in% c("United Kingdom", "France")) %>%
   mutate( #Transform to work better as column headers
     article = article %>%
@@ -143,8 +143,38 @@ views_cleaned %>%
   ) %>%
   filter(views_france > views_united_kingdom) %>%
   select(date_of_count, views_france, views_united_kingdom)
+france_more
 ```
 
-`r lightbulb("Can you find any reason why people would be looking up France on these dates.  I'm not sure I can!")`
+*(There's a neater way of printing tables like the one above, so they appear like the one below.  Have a look in the `.Rmd` file corresponding to this `.md` file to see how it's done!)*
+
+```{r kable, echo = FALSE, results = "asis"}
+france_more %>% #First code to prettify the dates
+  mutate(
+    printable_date = paste(
+      day(date_of_count),
+      month(date_of_count, label = TRUE, abbr = FALSE),
+      year(date_of_count)
+    )
+  ) %>%
+  select(printable_date, views_france, views_united_kingdom) %>%
+  #Now the important bit, the code that makes the nice table
+  knitr::kable(
+    col.names = c(
+      "Date", "Views of *France*", "Views of *United Kingdom*"
+    ),
+    caption = paste(
+      "Table: Dates in 2020 when the *France* article had more views than",
+      "the *United Kingdom* article on the English-language Wikipedia."
+    ),
+    format.args = list(big.mark = ",")
+    #From https://stackoverflow.com/questions/31813559/r-markdown-table-1000-separator/31838241
+  )
+```
+
+`r lightbulb("The code chunk making the table above uses some code to make the dates look nice.  What it doesn't do is add the appropriate suffix to the date: so it writes \"23 February\" instead of \"23rd February\".  Can you modify it to do that?  It's a bit tricky, because there's no nice lubridate function for it!")`
+
+
+`r lightbulb("Can you find any reason why people would be looking up France on these dates?  I'm not sure I can!")`
 
 This is a shorter write-up than usual, because so much went into the scraping script.  But there's a lot we could do with these data!

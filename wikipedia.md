@@ -177,7 +177,7 @@ the UK. There are a couple of ways to do this, but I think this is
 occasion where `pivot_wider` might actually be useful.
 
 ``` r
-views_cleaned %>%
+france_more <- views_cleaned %>%
   filter(article %in% c("United Kingdom", "France")) %>%
   mutate( #Transform to work better as column headers
     article = article %>%
@@ -191,6 +191,7 @@ views_cleaned %>%
   ) %>%
   filter(views_france > views_united_kingdom) %>%
   select(date_of_count, views_france, views_united_kingdom)
+france_more
 ```
 
     ## # A tibble: 5 × 3
@@ -202,8 +203,29 @@ views_cleaned %>%
     ## 4 2020-10-29           39012                31736
     ## 5 2020-10-30           39268                29961
 
+*(There’s a neater way of printing tables like the one above, so they
+appear like the one below. Have a look in the `.Rmd` file corresponding
+to this `.md` file to see how it’s done!)*
+
+| Date              | Views of *France* | Views of *United Kingdom* |
+|:------------------|------------------:|--------------------------:|
+| 23 February 2020  |            46,606 |                    31,158 |
+| 24 February 2020  |            58,163 |                    30,337 |
+| 23 September 2020 |            81,260 |                    29,802 |
+| 29 October 2020   |            39,012 |                    31,736 |
+| 30 October 2020   |            39,268 |                    29,961 |
+
+Table: Dates in 2020 when the *France* article had more views than the
+*United Kingdom* article on the English-language Wikipedia.
+
+💡 *The code chunk making the table above uses some code to make the
+dates look nice. What it doesn’t do is add the appropriate suffix to the
+date: so it writes “23 February” instead of “23rd February”. Can you
+modify it to do that? It’s a bit tricky, because there’s no nice
+lubridate function for it!* 💡
+
 💡 *Can you find any reason why people would be looking up France on
-these dates. I’m not sure I can!* 💡
+these dates? I’m not sure I can!* 💡
 
 This is a shorter write-up than usual, because so much went into the
 scraping script. But there’s a lot we could do with these data!
