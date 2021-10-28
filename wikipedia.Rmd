@@ -9,10 +9,140 @@ editor_options:
 
 ```{r load-packages, message = FALSE}
 library(tidyverse)
+library(here)
 library(lubridate)
+library(scales)
+```
+
+```{r setup, echo = FALSE}
+lightbulb <- function(x) {
+  paste(emo::ji("bulb"), " *", x, "* ", emo::ji("bulb"), sep = "")
+}
 ```
 
 ## Read data
-NEW INTRO
+This week we don't start with any data.  Instead we scrape it from APIs belonging to Wikipedia.  *(I believe Mine mentions APIs in the videos, but she doesn't use them: this is new material in a Code-Along, for once!)*  One gives us [articles in a category](https://www.mediawiki.org/wiki/API:Categorymembers) from Wikipedia's article categorisation system ^[If you look at the bottom of any Wikipedia article, you'll see the categories to which it belongs.], and the other gives us [page views data for a given article](https://wikitech.wikimedia.org/wiki/Analytics/AQS/Pageviews).  You can see the scraping script for this in this repo, in the `data/scraping-script.R` file, and you should read the comments in there first.
 
-The rest of this document will be filled in during the live code-along on Thursday.
+`r lightbulb("Why do we put our scraping script in a separate \x60.R\x60 file?")`
+
+We can now load the data ^[A quick note here: the things we're getting in the `countries-in-europe` dataset are what we obtained from Wikipedia, and are what fit within English-language Wikipedia editors' definition of a "country".  As we've discussed before, what exactly counts as a country is contentious, and inclusion on this list, or lack thereof, does not imply either way the opinions of the course staff or of the University of Edinburgh on the topic of which of these entities are countries!  Something similar also applies to the names of countries as reflected here.].
+
+```{r load-data, message = FALSE}
+country_data <- readRDS(here("data/countries-in-europe.Rds"))
+views_data <- readRDS(here("data/country-article-views.Rds"))
+```
+
+## Cleanup
+Let's run the `glimpse` function and have a look at what data we've got in the `views_data` dataset.
+```{r glimpse}
+glimpse(views_data)
+```
+
+Because we scraped these data ourselves, there's no data dictionary, but inferring from the manual for the API:
+* `project` is the project whose views data we're looking at (here, the English-language Wikipedia, or "en.wikipedia" for short);
+* `article` is an article on the project;
+* `granularity` is telling us over what time span the number of views was counted
+* `timestamp` is a character string telling us on what day the data were counted
+* `access` tells us what mode of access we're counting views for, e.g. the mobile app or the desktop site (here, always `"all-access"`, so the aggregate figures);
+* `agent` tells us what type of viewer we're counting views for, namely human or bor (here, always `"all-agents"`, so again a total)
+* `views` is the number of page views
+
+So four of these seven columns are the same in all rows of our dataset:
+
+```{r n_distinct}
+views_data %>%
+  summarise(
+    n_projects      = n_distinct(project),
+    n_granularities = n_distinct(granularity),
+    n_accesses      = n_distinct(access),
+    n_agents        = n_distinct(agent)
+  )
+```
+
+We could remove these, but it might be useful to keep them around in case we scraped any other data where these values were different.
+
+The most notable issue with the data is the `timestamp` column; that would be much more helpful as a date.  The timestamp breaks down as:
+- the first four digits represent the year;
+- the fifth and sixth represent the month;
+- the seventh and eighth represent the day;
+- the ninth and tenth are always `"00"`.
+
+We can check that last claim:
+```{r check-00}
+views_data %>%
+  mutate(digits910 = str_sub(timestamp, start = 9, end = 10)) %>%
+  count(digits910)
+```
+
+We can parse this with `lubridate`, though we have to be a bit careful because those ninth and tenth digits confuse it.
+```{r confused}
+ymd("2020010100")
+```
+
+Fortunately, this isn't hard to fix.  While we're at it, we can make the `access` and `agent` columns nicer-looking, and remove the underscores from the `article` column (which are in the article URLs, but not actually in their titles).
+
+```{r timestamp}
+views_cleaned <- views_data %>%
+  mutate(
+    date_of_count = timestamp %>%
+      str_sub(start = 1, end = 8) %>%
+      ymd(), #Another mini pipeline!
+    access = access %>%
+      str_replace_all(pattern = "-", replacement = " ") %>%
+      str_to_sentence(),
+    agent = agent %>%
+      str_replace_all(pattern = "-", replacement = " ") %>%
+      str_to_sentence(),
+    article = article %>%
+      str_replace_all(pattern = "_", replacement = " ")
+  ) %>%
+  select(-timestamp) #We don't need that any more
+```
+
+`r lightbulb('Suppose we wanted the \x60article\x60 column to instead reflect the names of the entities in it: so we would replace the entries reading "Georgia (country)"---which article has to have that name because Georgia is also the name of a state in the US---with simply "Georgia".  How would we go about doing that?')`
+
+Now, as ever, we can make nice plots.
+
+```{r uk-france}
+views_cleaned %>%
+  filter(article %in% c("United Kingdom", "France")) %>%
+  ggplot(aes(x = date_of_count, y = views, colour = article)) +
+  geom_line() +
+  labs(
+    x = "Date",
+    y = "View count",
+    colour = "Country",
+    title = "In general, the UK has more views than France",
+    subtitle = "Data from the English-language Wikipedia",
+    caption = "Source: Wikimedia Foundation"
+  ) +
+  scale_y_continuous(labels = label_number(scale = 1e-3, suffix = "k")) +
+  scale_colour_viridis_d(end = 0.9) +
+  #end = 0.9 tweaks endpoint of colour scale so it's still visible
+  theme_minimal()
+```
+
+`r lightbulb("Do you think this would still be true on the French-language Wikipedia?  How could you check?")`
+
+To round off, let's find out which days had France with more views than the UK.  There are a couple of ways to do this, but I think this is occasion where `pivot_wider` might actually be useful.
+
+```{r pivot-wider}
+views_cleaned %>%
+  filter(article %in% c("United Kingdom", "France")) %>%
+  mutate( #Transform to work better as column headers
+    article = article %>%
+      str_to_lower() %>%
+      str_replace_all(pattern = " ", replacement = "_")
+  ) %>%
+  pivot_wider(
+    names_from = article,
+    names_prefix = "views_",
+    values_from = views
+  ) %>%
+  filter(views_france > views_united_kingdom) %>%
+  select(date_of_count, views_france, views_united_kingdom)
+```
+
+`r lightbulb("Can you find any reason why people would be looking up France on these dates.  I'm not sure I can!")`
+
+This is a shorter write-up than usual, because so much went into the scraping script.  But there's a lot we could do with these data!
