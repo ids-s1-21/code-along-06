@@ -144,6 +144,8 @@ of the entities in it: so we would replace the entries reading “Georgia
 the name of a state in the US—with simply “Georgia”. How would we go
 about doing that?* 💡
 
+## Exploratory data analysis
+
 Now, as ever, we can make nice plots.
 
 ``` r
